@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users        User[]
+  jobs         Job[]
+  candidates   Candidate[]
+  invoices     Invoice[]
+  subscriptions Subscription[]
+  auditLogs    AuditLog[]
+  roles        Role[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         String   // ADMIN, RECRUITER, MANAGER, FINANCE, EMPLOYEE
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  auditLogs    AuditLog[]
+  onboarding   Onboarding?
+  attendance   Attendance[]
+  payroll      Payroll[]
+  performance  Performance[]
+  requests     ServiceRequest[]
+  exitRecord   ExitRecord?
+}
+
+model Role {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  permissions  String
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Job {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  department   String
+  status       String   // OPEN, CLOSED, DRAFT
+  applicants   Int      @default(0)
+  fit          Int      @default(0)
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  candidates   Candidate[]
+  interviewPacks InterviewPack[]
+}
+
+model Candidate {
+  id           String   @id @default(cuid())
+  name         String
+  email        String
+  resumeUrl    String?
+  skills       String
+  experience   Int
+  education    String
+  summary      String
+  fit          Int      @default(0)
+  stage        String   // APPLIED, SCREENING, INTERVIEW, OFFER, HIRED, REJECTED
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  jobs         Job[]
+  resumes      Resume[]
+  interviewPacks InterviewPack[]
+}
+
+model Resume {
+  id           String   @id @default(cuid())
+  candidateId  String
+  candidate    Candidate @relation(fields: [candidateId], references: [id])
+  content      String   // Raw text from PDF
+  parsedData   String   // JSON string of parsed entities
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model InterviewPack {
+  id           String   @id @default(cuid())
+  candidateId  String
+  candidate    Candidate @relation(fields: [candidateId], references: [id])
+  jobId        String?
+  job          Job?      @relation(fields: [jobId], references: [id])
+  questions    String   // JSON array of questions
+  depth        String   // Basic, Intermediate, Advanced
+  owner        String   // Recruiter/Manager name
+  status       String   // GENERATED, COMPLETED, REVIEWED
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Invoice {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  plan         String
+  amount       Float
+  seats        Int
+  status       String   // PAID, UNPAID, OVERDUE
+  due          DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  plan         String   // STARTER, GROWTH, ENTERPRISE
+  seats        Int
+  status       String   // ACTIVE, EXPIRED, CANCELLED
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  action       String
+  details      String   // JSON details of change
+  createdAt    DateTime @default(now())
+}
+
+model Onboarding {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  status       String   // PENDING, IN_PROGRESS, COMPLETED
+  checklist    String   // JSON checklist
+  updatedAt    DateTime @updatedAt
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  date         DateTime
+  status       String   // PRESENT, ABSENT, LEAVE
+  clockIn      DateTime?
+  clockOut     DateTime?
+  createdAt    DateTime @default(now())
+}
+
+model Payroll {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  month        String   // e.g., "2026-06"
+  amount       Float
+  status       String   // PENDING, PAID, FAILED
+  createdAt    DateTime @default(now())
+}
+
+model Performance {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  cycle        String   // e.g., "Q1-2026"
+  score        Int
+  review       String
+  createdAt    DateTime @default(now())
+}
+
+model ServiceRequest {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  type         String   // DOCUMENT, LEAVE, QUERY
+  status       String   // OPEN, RESOLVED, REJECTED
+  description  String
+  createdAt    DateTime @default(now())
+}
+
+model ExitRecord {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  status       String   // PENDING, CLEARED
+  clearance    String   // JSON clearance status
+  exitDate     DateTime
+  createdAt    DateTime @default(now())
+}
