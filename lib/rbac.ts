@@ -137,7 +137,8 @@ export function can(user: DemoUser, permission: Permission) {
   return rolePermissions[user.role].includes(permission);
 }
 
-export function encodeSession(user: DemoUser) {
+// Encode a session cookie containing the user's ID. Accepts any object with an `id` property.
+export function encodeSession(user: { id: string }) {
   return Buffer.from(JSON.stringify({ id: user.id }), "utf8").toString("base64url");
 }
 
