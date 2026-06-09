@@ -36,7 +36,8 @@ export async function POST(req: Request) {
         experience: experience || 0,
         education,
         summary,
-        tenantId,
+        skills: body.skills || "",
+        tenant: { connect: { id: tenantId } },
         stage: "APPLIED",
       },
     });
